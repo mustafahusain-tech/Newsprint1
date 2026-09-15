@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Newsprint — one story, three reading levels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EFEDF6; --paper-2:#FFFFFF; --ink:#171337; --ink-soft:#5E5A85;
+  --blue:#2F3BE0; --yellow:#FFC93C; --coral:#FF6B5A; --green:#2E9E52;
+  --line:rgba(23,19,55,.14);
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Newsreader",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:19px;line-height:1.6;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+#progress{position:fixed;top:0;left:0;height:4px;width:0;background:var(--coral);z-index:60}
+
+header.top{border-bottom:2px solid var(--ink);background:var(--paper);position:relative;z-index:10}
+.top-in{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding:22px 0 16px;flex-wrap:wrap}
+.mast{font-family:var(--display);font-weight:800;font-size:clamp(38px,7vw,64px);line-height:.82;letter-spacing:-.045em;position:relative;text-transform:uppercase}
+.mast .ghost{position:absolute;inset:0;color:var(--coral);transform:translate(4px,4px);z-index:-1}
+.mast small{display:block;font-family:var(--mono);font-size:11px;font-weight:400;letter-spacing:.22em;color:var(--ink-soft);margin-top:12px;text-transform:uppercase}
+.dateline{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);text-align:right}
+.dateline b{display:block;color:var(--ink);font-size:14px;letter-spacing:.06em}
+.rebuild{background:none;border:1px solid var(--line);border-radius:7px;padding:5px 9px;margin-top:8px;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+.rebuild:hover{border-color:var(--ink);color:var(--ink)}
+
+nav.tabs{border-bottom:1px solid var(--line);background:var(--paper);position:sticky;top:0;z-index:40}
+.tabs-in{display:flex;overflow-x:auto;scrollbar-width:none;min-height:56px}
+.tabs-in::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;min-width:200px;text-align:left;background:none;border:0;border-right:1px solid var(--line);padding:13px 16px;cursor:pointer;font-family:var(--display);font-weight:700;font-size:15px;color:var(--ink-soft);transition:background .18s,color .18s;line-height:1.25}
+.tab:last-child{border-right:0}
+.tab span{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.18em;font-weight:400;margin-bottom:5px;text-transform:uppercase}
+.tab:hover:not(:disabled){background:rgba(47,59,224,.07);color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--ink);color:#fff}
+.tab[aria-selected="true"] span{color:var(--yellow)}
+.tab:disabled{opacity:.4;cursor:wait}
+
+#build{padding:70px 0 90px;display:none}
+#build.on{display:block}
+#build h2{font-family:var(--display);font-weight:800;font-size:clamp(28px,5vw,46px);letter-spacing:-.03em;margin:0 0 8px;max-width:18ch;line-height:1.02}
+#build p.sub{color:var(--ink-soft);max-width:52ch;margin:0 0 34px}
+.steps{list-style:none;padding:0;margin:0;max-width:520px;font-family:var(--mono);font-size:13px;letter-spacing:.04em}
+.steps li{padding:11px 0;border-top:1px solid var(--line);color:var(--ink-soft);display:flex;gap:12px;align-items:center}
+.steps li .dot{width:9px;height:9px;border-radius:50%;background:var(--line);flex:none}
+.steps li.now{color:var(--ink)}
+.steps li.now .dot{background:var(--yellow);animation:pulse 1s infinite}
+.steps li.done{color:var(--ink)}
+.steps li.done .dot{background:var(--green)}
+.steps li.fail .dot{background:var(--coral)}
+@keyframes pulse{50%{transform:scale(1.7)}}
+
+.hero{padding:44px 0 30px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:38px;align-items:end}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--blue);margin:0 0 14px}
+h1{font-family:var(--display);font-weight:800;letter-spacing:-.035em;line-height:.98;font-size:clamp(32px,5.6vw,62px);margin:0 0 16px}
+.byline{font-family:var(--mono);font-size:12px;color:var(--ink-soft);letter-spacing:.06em;border-top:1px solid var(--line);padding-top:12px}
+.motif{width:100%;height:190px;border-radius:var(--r);overflow:hidden;background:var(--ink)}
+
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:38px;padding-bottom:56px;align-items:start}
+article{font-size:20px;line-height:1.68;max-width:66ch}
+article p{margin:0 0 1.15em}
+article p:first-of-type::first-letter{font-family:var(--display);font-weight:800;float:left;font-size:3.3em;line-height:.78;padding:.06em .1em 0 0;color:var(--blue)}
+.fade{animation:fade .38s ease}
+@keyframes fade{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+
+.term{font:inherit;background:linear-gradient(transparent 62%,var(--yellow) 62%);border:0;padding:0;cursor:pointer;color:inherit;position:relative}
+.term::after{content:"?";font-family:var(--mono);font-size:.6em;vertical-align:super;color:var(--blue);margin-left:1px}
+.term[aria-expanded="true"]{background:var(--yellow)}
+.defn{display:none;position:absolute;left:0;top:calc(100% + 9px);width:270px;max-width:74vw;z-index:30;background:var(--ink);color:#fff;padding:12px 14px;border-radius:10px;font-family:var(--mono);font-size:12.5px;line-height:1.5;text-align:left}
+.defn b{color:var(--yellow);display:block;margin-bottom:4px;letter-spacing:.1em;text-transform:uppercase;font-size:10.5px}
+.term[aria-expanded="true"] .defn{display:block}
+
+aside{position:sticky;top:70px;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.card h2{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 12px;font-weight:400}
+.dial{background:var(--ink);border-color:var(--ink);color:#fff}
+.dial h2{color:rgba(255,255,255,.55)}
+.track{position:relative;display:grid;grid-template-columns:repeat(3,1fr);background:rgba(255,255,255,.09);border-radius:11px;padding:4px;margin-bottom:14px}
+.thumb{position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 8px)/3);background:var(--yellow);border-radius:8px;transition:transform .34s cubic-bezier(.65,.05,.16,1)}
+.notch{position:relative;z-index:2;background:none;border:0;cursor:pointer;padding:11px 0;font-family:var(--display);font-weight:700;font-size:17px;color:rgba(255,255,255,.62);transition:color .2s}
+.notch[aria-checked="true"]{color:var(--ink)}
+.dial-meta{font-family:var(--mono);font-size:11.5px;line-height:1.9;color:rgba(255,255,255,.72)}
+.dial-meta span{float:right;color:#fff}
+.dial-note{font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,.42);margin-top:10px;line-height:1.5}
+.listen{width:100%;background:var(--paper-2);border:1px solid var(--ink);border-radius:10px;padding:11px;cursor:pointer;font-family:var(--display);font-weight:700;font-size:14px;color:var(--ink)}
+.listen:hover{background:var(--yellow)}
+.gloss-list{margin:0;font-family:var(--mono);font-size:12px;line-height:1.55}
+.gloss-list dt{font-weight:600;color:var(--blue);margin-top:9px}
+.gloss-list dt:first-child{margin-top:0}
+.gloss-list dd{margin:2px 0 0;color:var(--ink-soft)}
+.src{font-family:var(--mono);font-size:11.5px;line-height:1.6}
+.src a{display:block;color:var(--blue);margin-bottom:7px;word-break:break-word}
+
+.debate{background:var(--ink);color:#fff;border-radius:var(--r);padding:clamp(26px,5vw,46px);margin-bottom:24px}
+.debate .kicker{color:var(--yellow)}
+.debate h2{font-family:var(--display);font-weight:800;font-size:clamp(25px,4.2vw,40px);line-height:1.05;letter-spacing:-.03em;margin:0 0 26px;max-width:23ch}
+.votes{display:flex;gap:12px;flex-wrap:wrap}
+.vote{flex:1 1 190px;background:none;border:2px solid rgba(255,255,255,.3);color:#fff;border-radius:11px;padding:15px 18px;cursor:pointer;font-family:var(--display);font-weight:700;font-size:17px;text-align:left;transition:.18s}
+.vote:hover{border-color:var(--yellow);background:rgba(255,201,60,.12)}
+.vote.picked{background:var(--yellow);border-color:var(--yellow);color:var(--ink)}
+.bars{margin-top:22px;display:none}.bars.on{display:block}
+.bar-row{font-family:var(--mono);font-size:12px;margin-bottom:11px}
+.bar-track{height:11px;background:rgba(255,255,255,.13);border-radius:6px;overflow:hidden;margin-top:6px}
+.bar-fill{height:100%;width:0;background:var(--coral);transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.bar-row.yes .bar-fill{background:var(--yellow)}
+.bar-note{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.45);margin-top:14px;line-height:1.6}
+
+.panel{background:var(--paper-2);border:1px solid var(--line);border-radius:var(--r);padding:clamp(24px,4vw,38px);margin-bottom:24px}
+.panel h2{font-family:var(--display);font-weight:800;font-size:clamp(24px,3.4vw,34px);letter-spacing:-.025em;margin:0 0 4px}
+.score{font-family:var(--mono);font-size:12px;color:var(--ink-soft);letter-spacing:.1em;margin:0 0 22px;text-transform:uppercase}
+.q{border-top:1px solid var(--line);padding:20px 0 6px}
+.qtype{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:#fff;background:var(--blue);padding:3px 7px;border-radius:4px;display:inline-block;margin-bottom:9px}
+.qtype[data-t="Vocabulary"]{background:var(--coral)}
+.qtype[data-t="Infer"]{background:var(--ink)}
+.qtype[data-t="Evaluate"]{background:var(--green)}
+.q p.qt{font-family:var(--display);font-weight:700;font-size:19px;margin:0 0 14px;line-height:1.3}
+.opts{display:grid;gap:8px;max-width:660px}
+.opt{text-align:left;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:11px 14px;cursor:pointer;font-family:var(--body);font-size:17px;color:var(--ink);transition:.15s;display:flex;gap:11px}
+.opt:hover:not(:disabled){border-color:var(--blue);background:#fff}
+.opt:disabled{cursor:default;opacity:.5}
+.opt .mark{font-family:var(--mono);font-size:12px;color:var(--ink-soft);padding-top:3px}
+.opt.right{background:#E8F7EC;border-color:var(--green);opacity:1}
+.opt.right .mark{color:var(--green)}
+.opt.wrong{background:#FDECEA;border-color:var(--coral);opacity:1}
+.opt.wrong .mark{color:var(--coral)}
+.why{font-family:var(--mono);font-size:12.5px;line-height:1.6;color:var(--ink-soft);margin:11px 0 0;display:none}
+.why.on{display:block}
+
+textarea{width:100%;min-height:170px;resize:vertical;border:1px solid var(--line);border-radius:11px;padding:15px 17px;font-family:var(--body);font-size:18px;line-height:1.55;color:var(--ink);background:var(--paper)}
+textarea:focus{background:#fff}
+.sumbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-top:12px}
+.wc{font-family:var(--mono);font-size:12px;color:var(--ink-soft);letter-spacing:.08em}
+.wc.ok{color:var(--green)}
+.send{background:var(--ink);color:#fff;border:0;border-radius:10px;padding:13px 22px;cursor:pointer;font-family:var(--display);font-weight:700;font-size:16px}
+.send:hover:not(:disabled){background:var(--blue)}
+.send:disabled{opacity:.35;cursor:not-allowed}
+.result{display:none;margin-top:26px;border-top:1px solid var(--line);padding-top:26px}
+.result.on{display:grid;grid-template-columns:150px minmax(0,1fr);gap:30px;align-items:start}
+.bigscore{background:var(--ink);color:#fff;border-radius:var(--r);padding:18px;text-align:center}
+.bigscore b{font-family:var(--display);font-weight:800;font-size:56px;line-height:1;display:block;color:var(--yellow)}
+.bigscore span{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+.crit{font-family:var(--mono);font-size:12px;margin-bottom:12px}
+.crit i{font-style:normal;float:right;color:var(--ink-soft)}
+.crit .ctrack{height:8px;background:var(--line);border-radius:5px;overflow:hidden;margin-top:5px}
+.crit .cfill{height:100%;background:var(--blue);width:0;transition:width .7s ease}
+.fb{margin-top:18px}
+.fb p{margin:0 0 10px;font-size:17.5px}
+.fb b{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:3px}
+.err{background:#FDECEA;border:1px solid var(--coral);border-radius:10px;padding:13px 15px;font-family:var(--mono);font-size:12.5px;line-height:1.6;margin-top:16px;display:none}
+.err.on{display:block}
+
+.notice{border:1px dashed var(--ink-soft);border-radius:11px;padding:14px 17px;font-family:var(--mono);font-size:11.5px;line-height:1.7;color:var(--ink-soft);margin-bottom:30px}
+.notice b{color:var(--ink)}
+footer{border-top:2px solid var(--ink);padding:26px 0 50px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);line-height:1.8}
+footer b{color:var(--ink)}
+
+
+/* streak */
+.streak-pill{display:flex;align-items:center;gap:7px;background:var(--ink);color:#fff;border:0;border-radius:999px;padding:7px 13px 7px 10px;cursor:pointer;font-family:var(--display);font-weight:700;font-size:14px;margin-top:8px}
+.streak-pill .flame{font-size:15px;filter:grayscale(1) opacity(.5)}
+.streak-pill.lit .flame{filter:none}
+.streak-pill .n{color:var(--yellow)}
+.streak-modal{position:fixed;inset:0;background:rgba(23,19,55,.55);z-index:80;display:none;align-items:center;justify-content:center;padding:22px}
+.streak-modal.on{display:flex}
+.streak-box{background:var(--paper-2);border-radius:18px;padding:clamp(24px,4vw,38px);max-width:440px;width:100%;position:relative;border:1px solid var(--line)}
+.streak-box h2{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.02em;margin:0 0 4px}
+.streak-box .close{position:absolute;top:14px;right:16px;background:none;border:0;font-size:22px;cursor:pointer;color:var(--ink-soft);line-height:1}
+.streak-big{font-family:var(--display);font-weight:800;font-size:64px;line-height:1;color:var(--ink);margin:14px 0 2px}
+.streak-big .flame{font-size:46px}
+.streak-sub{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--ink-soft);margin-bottom:22px}
+.streak-week{display:flex;gap:7px;margin:0 0 22px}
+.streak-week .d{flex:1;text-align:center;font-family:var(--mono);font-size:10px;color:var(--ink-soft)}
+.streak-week .dot{width:100%;aspect-ratio:1;border-radius:9px;background:var(--line);margin-bottom:5px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.streak-week .dot.done{background:var(--yellow)}
+.streak-week .dot.today{outline:2px solid var(--ink);outline-offset:2px}
+.streak-task{border-top:1px solid var(--line);padding:12px 0;display:flex;align-items:center;gap:11px;font-size:16px}
+.streak-task .box{width:22px;height:22px;border-radius:6px;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff}
+.streak-task.done .box{background:var(--green);border-color:var(--green)}
+.streak-task.done{color:var(--ink)}
+.streak-task:not(.done){color:var(--ink-soft)}
+.streak-note{font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--ink-soft);margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+.streak-reset{background:none;border:0;color:var(--coral);font-family:var(--mono);font-size:11px;cursor:pointer;text-decoration:underline;padding:0;margin-top:8px}
+.streak-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(120%);background:var(--ink);color:#fff;padding:14px 22px;border-radius:12px;font-family:var(--display);font-weight:700;font-size:16px;z-index:90;transition:transform .4s cubic-bezier(.2,.8,.2,1);box-shadow:0 8px 30px rgba(23,19,55,.3);display:flex;align-items:center;gap:9px}
+.streak-toast .flame{font-size:20px}
+.streak-toast.on{transform:translateX(-50%) translateY(0)}
+
+@media (max-width:900px){
+  .hero,.cols{grid-template-columns:1fr;gap:26px}
+  aside{position:static}
+  .motif{height:130px;order:-1}
+  article{font-size:18.5px}
+  .result.on{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="mast">Newsprint<span class="ghost" aria-hidden="true">Newsprint</span>
+      <small>Read · Debate · Summarise</small>
+    </div>
+    <div class="dateline">Edition of<b id="today"></b>
+      <button class="rebuild" id="rebuild">Rebuild today</button>
+      <button class="streak-pill" id="streak-pill" aria-label="Your reading streak"><span class="flame">🔥</span> <span class="n" id="streak-n">0</span>&nbsp;day streak</button>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="Today's stories"><div class="wrap tabs-in" id="tabs" role="tablist"></div></nav>
+
+<div class="wrap" id="build">
+  <h2>Today's edition is being written.</h2>
+  <p class="sub">Searching the news, checking each story is suitable for the classroom, then writing it three times over.</p>
+  <ol class="steps" id="steps"></ol>
+  <div class="err" id="build-err"></div>
+</div>
+
+<main class="wrap" id="main" hidden>
+  <p class="notice" id="seed-note" style="display:none;margin-top:26px"></p>
+  <div class="hero">
+    <div>
+      <p class="kicker" id="kicker"></p>
+      <h1 id="headline"></h1>
+      <p class="byline" id="byline"></p>
+    </div>
+    <div class="motif" id="motif"></div>
+  </div>
+
+  <div class="cols">
+    <article id="article" aria-live="polite"></article>
+    <aside>
+      <div class="card dial">
+        <h2>Reading level</h2>
+        <div class="track" role="radiogroup" aria-label="Choose a reading level">
+          <div class="thumb" id="thumb"></div>
+          <button class="notch" role="radio" data-lv="0" aria-checked="false">1</button>
+          <button class="notch" role="radio" data-lv="1" aria-checked="true">2</button>
+          <button class="notch" role="radio" data-lv="2" aria-checked="false">3</button>
+        </div>
+        <div class="dial-meta">Reading age <span id="m-age"></span><br>Words <span id="m-words"></span><br>Read time <span id="m-time"></span></div>
+        <p class="dial-note">Same story, same facts, three levels. The whole class arrives at the same discussion.</p>
+      </div>
+      <div class="card"><button class="listen" id="listen">▶ Read this aloud</button></div>
+      <div class="card"><h2>Words to know</h2><dl class="gloss-list" id="gloss"></dl></div>
+      <div class="card"><h2>Reported by</h2><div class="src" id="sources"></div></div>
+    </aside>
+  </div>
+
+  <section class="debate" id="debate">
+    <p class="kicker">The big question</p>
+    <h2 id="q-text"></h2>
+    <div class="votes">
+      <button class="vote" data-v="yes" id="v-yes"></button>
+      <button class="vote" data-v="no" id="v-no"></button>
+    </div>
+    <div class="bars" id="bars">
+      <div class="bar-row yes"><span>Agree</span> <b id="p-yes"></b><div class="bar-track"><div class="bar-fill" id="f-yes"></div></div></div>
+      <div class="bar-row"><span>Disagree</span> <b id="p-no"></b><div class="bar-track"><div class="bar-fill" id="f-no"></div></div></div>
+      <p class="bar-note">Results include a sample class of 28. Now argue the side you didn't pick — that's the exercise.</p>
+    </div>
+  </section>
+
+  <section class="panel" id="quiz-panel">
+    <p class="kicker">Comprehension check</p>
+    <h2>Did it go in?</h2>
+    <p class="score" id="score"></p>
+    <div id="qs"></div>
+  </section>
+
+  <section class="panel">
+    <p class="kicker">Summarise it</p>
+    <h2>Say it in your own words.</h2>
+    <p class="score">Write 40–90 words · marked on accuracy, coverage, own words and concision</p>
+    <textarea id="sum" placeholder="What actually happened, and why does it matter? Don't copy sentences from the story — that's the whole point."></textarea>
+    <div class="sumbar">
+      <span class="wc" id="wc">0 words</span>
+      <button class="send" id="mark" disabled>Mark my summary</button>
+    </div>
+    <div class="err" id="sum-err"></div>
+    <div class="result" id="result">
+      <div class="bigscore"><b id="r-score">–</b><span>out of 10</span></div>
+      <div>
+        <div id="r-crit"></div>
+        <div class="fb">
+          <p><b>What worked</b><span id="r-good"></span></p>
+          <p><b>Do this next time</b><span id="r-improve"></span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="notice"><b>For teachers:</b> stories are selected and rewritten automatically from live news sources each morning, with an age-suitability filter applied at selection. Automated curation is not a substitute for a teacher's eye — check the edition before you project it. Original reporting is linked in the sidebar; always send older students to the source.</p>
+</main>
+
+<footer class="wrap">
+  <b>Newsprint</b> · a daily reading room for the classroom.<br>
+  Stories are drawn from live news sources and rewritten at three reading levels. Curation and marking are automated and indicative — preview each edition before you use it.
+</footer>
+
+<script>
+
+/* ==================== streak engine (localStorage, device-only) ==================== */
+const Streak = (() => {
+  const KEY = "newsprint.streak.v1";
+  const dayKey = d => (d||new Date()).toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch{ return {}; }
+  }
+  function save(st){ try{ localStorage.setItem(KEY, JSON.stringify(st)); }catch{} }
+  function blankDay(){ return {read:false, quiz:false, sum:false}; }
+
+  // returns {count, days:{...}, todayTasks, justCompleted:bool, milestone:int|null}
+  function state(){
+    const st = load();
+    return {
+      count: st.count||0,
+      lastDone: st.lastDone||null,      // last date the day was fully completed
+      history: st.history||{},          // {date: true} for completed days
+      today: st.today || {date: dayKey(), tasks: blankDay()}
+    };
+  }
+
+  function markTask(which){
+    const st = state();
+    const t = dayKey();
+    if(!st.today || st.today.date !== t){ st.today = {date:t, tasks:blankDay()}; }
+    if(st.today.tasks[which]) { persist(st); return {changed:false, ...summary(st)}; }
+    st.today.tasks[which] = true;
+
+    const complete = st.today.tasks.read && st.today.tasks.quiz && st.today.tasks.sum;
+    let justCompleted = false, milestone = null;
+    if(complete && !st.history[t]){
+      justCompleted = true;
+      st.history[t] = true;
+      // continuous? was yesterday completed?
+      const y = dayKey(new Date(Date.now()-864e5));
+      st.count = (st.lastDone === y) ? (st.count||0)+1 : 1;
+      st.lastDone = t;
+      if([3,5,7,10,14,21,30,50,100].includes(st.count)) milestone = st.count;
+    }
+    persist(st);
+    return {changed:true, justCompleted, milestone, ...summary(st)};
+  }
+
+  function summary(st){
+    // if the streak was broken (last completed day is neither today nor yesterday), show 0
+    const t = dayKey(), y = dayKey(new Date(Date.now()-864e5));
+    let display = st.count||0;
+    if(st.lastDone && st.lastDone !== t && st.lastDone !== y) display = 0;
+    return {count: display, tasks: (st.today && st.today.date===t) ? st.today.tasks : blankDay(), history: st.history||{}, lastDone: st.lastDone};
+  }
+
+  function persist(st){
+    save({count:st.count||0, lastDone:st.lastDone||null, history:st.history||{}, today:st.today});
+  }
+  function reset(){ save({}); }
+  function current(){ return summary(state()); }
+  return {markTask, current, reset, dayKey};
+})();
+
+function refreshStreakUI(){
+  const s = Streak.current();
+  $("streak-n").textContent = s.count;
+  $("streak-count").textContent = s.count;
+  document.getElementById("streak-pill").classList.toggle("lit", s.count>0);
+  document.getElementById("task-read").classList.toggle("done", !!s.tasks.read);
+  document.getElementById("task-quiz").classList.toggle("done", !!s.tasks.quiz);
+  document.getElementById("task-sum").classList.toggle("done", !!s.tasks.sum);
+  $("streak-flame").style.filter = s.count>0 ? "none" : "grayscale(1) opacity(.5)";
+  $("streak-sub").textContent = s.count>0
+    ? (s.tasks.read&&s.tasks.quiz&&s.tasks.sum ? "Done for today \u2014 come back tomorrow to keep it going." : "Finish today\u2019s three tasks to extend your streak.")
+    : "Read, answer and summarise a story to start a streak.";
+  // last 7 days row
+  const wk = $("streak-week"); wk.innerHTML="";
+  const labels=["S","M","T","W","T","F","S"];
+  for(let i=6;i>=0;i--){
+    const d=new Date(Date.now()-i*864e5); const k=Streak.dayKey(d);
+    const done=!!s.history[k]; const today=i===0;
+    const el=document.createElement("div"); el.className="d";
+    el.innerHTML=`<div class="dot ${done?'done':''} ${today?'today':''}">${done?'\U0001F525':''}</div>${labels[d.getDay()]}`;
+    wk.appendChild(el);
+  }
+}
+
+let toastTimer=null;
+function streakToast(text){
+  $("toast-text").textContent=text;
+  const t=$("streak-toast"); t.classList.add("on");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("on"), 3800);
+}
+
+function completeTask(which){
+  const r = Streak.markTask(which);
+  refreshStreakUI();
+  if(r.changed && r.justCompleted){
+    streakToast(r.milestone ? `${r.milestone}-day streak! Keep going.` : `Day complete \u2014 ${r.count}-day streak!`);
+  }
+}
+
+// modal open/close + reset wiring (runs after DOM present)
+function initStreakUI(){
+  const modal=$("streak-modal");
+  $("streak-pill").onclick=()=>{ refreshStreakUI(); modal.classList.add("on"); };
+  $("streak-close").onclick=()=>modal.classList.remove("on");
+  modal.onclick=e=>{ if(e.target===modal) modal.classList.remove("on"); };
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") modal.classList.remove("on"); });
+  $("streak-reset").onclick=()=>{ if(confirm("Reset your reading streak to zero? This can\u2019t be undone.")){ Streak.reset(); refreshStreakUI(); } };
+  refreshStreakUI();
+}
+
+
+const MODEL = "claude-sonnet-4-6";
+const AUDIENCE = "UK secondary school students aged 11 to 16";
+const SAFETY = `A story must be REJECTED if telling it accurately would require: graphic violence, injury or death detail; sexual content; description of suicide, self-harm or eating-disorder methods; abuse of children; or usable detail about weapons or drugs. Serious subjects such as war, elections, crime, disasters and climate ARE allowed when they can be told factually without those elements.`;
+
+let apiOK = true;
+
+const MOTIFS = {
+  waves:`<svg viewBox="0 0 400 190" preserveAspectRatio="none" width="100%" height="100%"><rect width="400" height="190" fill="#171337"/><g fill="none" stroke="#2F3BE0" stroke-width="2" opacity=".85">${[...Array(9)].map((_,i)=>`<path d="M0 ${34+i*17} Q 50 ${14+i*17} 100 ${34+i*17} T 200 ${34+i*17} T 300 ${34+i*17} T 400 ${34+i*17}"/>`).join("")}</g><circle cx="312" cy="52" r="21" fill="#FFC93C"/><path d="M120 190 L200 78 L280 190 Z" fill="#FF6B5A" opacity=".9"/></svg>`,
+  dots:`<svg viewBox="0 0 400 190" width="100%" height="100%"><rect width="400" height="190" fill="#171337"/><g fill="#2F3BE0">${[...Array(7)].map((_,r)=>[...Array(16)].map((_,c)=>`<circle cx="${16+c*25}" cy="${18+r*26}" r="${(r+c)%5===0?7:3.5}"/>`).join("")).join("")}</g><rect x="152" y="34" width="96" height="122" rx="15" fill="#FFC93C"/><rect x="164" y="48" width="72" height="94" rx="5" fill="#171337"/><line x1="152" y1="34" x2="248" y2="156" stroke="#FF6B5A" stroke-width="7"/></svg>`,
+  jars:`<svg viewBox="0 0 400 190" width="100%" height="100%"><rect width="400" height="190" fill="#171337"/>${[...Array(9)].map((_,i)=>{const x=32+i*42,y=44+(i%3)*16,c=['#2F3BE0','#FFC93C','#FF6B5A'][i%3];return `<g transform="translate(${x} ${y})"><ellipse cx="0" cy="34" rx="17" ry="30" fill="${c}" opacity=".9"/><rect x="-4" y="-6" width="8" height="16" fill="${c}"/></g>`}).join("")}<g stroke="#FFF" stroke-width="1.5" opacity=".2">${[...Array(6)].map((_,i)=>`<line x1="0" y1="${i*38}" x2="400" y2="${i*38}"/>`).join("")}</g></svg>`
+};
+
+/* ---------- api ---------- */
+const API = (location.hostname==="localhost"||location.hostname==="127.0.0.1") ? "" : "";  // same-origin
+
+async function fetchEdition(){
+  const r = await fetch(API + "/api/edition", {cache:"no-store"});
+  if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(e.error || ("HTTP "+r.status)); }
+  return r.json();
+}
+async function markOnServer(story, summary){
+  const r = await fetch(API + "/api/mark", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({story, summary})
+  });
+  if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(e.error || ("HTTP "+r.status)); }
+  return r.json();
+}
+
+/* ---------- prompts now live on the server ---------- */
+const dateStr = new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+
+/* ---------- offline rule-based marker (runs with no network) ---------- */
+const STOP = new Set(("a an the and or but if then than that this these those of in on at to for from by with " +
+"without as is are was were be been being it its they them their there here have has had do does did not no nor " +
+"so such very can could will would should may might must about into over under more most other some any each " +
+"which who whom what when where why how also just only even still yet up down out off again further once because " +
+"while during before after above below between both few many much own same too now new one two").split(" "));
+
+const words = t => (t.toLowerCase().match(/[a-z£$%\d][a-z'£$%\d.,-]*/g)||[]).map(w=>w.replace(/^[^a-z£$\d]+|[^a-z\d%]+$/g,"")).filter(Boolean);
+const shingles = (arr,n) => { const s=new Set(); for(let i=0;i+n<=arr.length;i++) s.add(arr.slice(i,i+n).join(" ")); return s; };
+const nums = t => (t.match(/£?\d[\d,.]*(?:\s?(?:billion|million|bn|%))?/gi)||[])
+  .map(x=>x.toLowerCase().replace(/[\s,]/g,"").replace(/billion/,"bn").replace(/million/,"m").replace(/\.+$/,""))
+  .filter(x=>/\d/.test(x));
+
+function markOffline(sourceText, summaryText){
+  const src = words(sourceText), sum = words(summaryText);
+  const srcSet = new Set(src), srcS5 = shingles(src,5);
+  const n = sum.length;
+
+  /* own words — how much was lifted verbatim */
+  const s5 = [...shingles(sum,5)];
+  const copied = s5.filter(g=>srcS5.has(g));
+  let run = 0, best = 0, bestPhrase = "";
+  for(let i=0;i<sum.length;i++){
+    let L=0; while(i+L<sum.length && srcS5.has(sum.slice(i+L,i+L+5).join(" "))) L++;
+    if(L+4 > best && L>0){ best = L+4; bestPhrase = sum.slice(i,i+L+4).join(" "); }
+  }
+  const copyRate = s5.length ? copied.length/s5.length : 0;
+  let own = 10 - copyRate*14 - Math.max(0,best-7)*0.9;
+  own = Math.max(0, Math.min(10, Math.round(own)));
+
+  /* key points — did they carry the load-bearing detail across */
+  const freq = {};
+  src.forEach(w=>{ if(!STOP.has(w) && w.length>3) freq[w]=(freq[w]||0)+1; });
+  const keyTerms = Object.keys(freq).sort((a,b)=>freq[b]-freq[a]).slice(0,10);
+  const keyNums = [...new Set(nums(sourceText))].slice(0,5);
+  const targets = [...new Set([...keyTerms, ...keyNums])];
+  const stem = w => w.replace(/(ing|ed|es|s)$/,"");
+  const sumStems = new Set(sum.map(stem));
+  const hit = targets.filter(t=> sumStems.has(stem(t)) || summaryText.toLowerCase().includes(t));
+  const missed = targets.filter(t=>!hit.includes(t)).slice(0,4);
+  const expected = Math.max(4, Math.round(targets.length*0.45));
+  let key = Math.round(Math.min(1, hit.length/expected)*10);
+
+  /* accuracy — anything asserted that isn't in the article */
+  const badNums = [...new Set(nums(summaryText))].filter(x=>!nums(sourceText).includes(x));
+  const midSentence = summaryText.split(/(?:^|[.!?]\s+)\S+/).join(" ");
+  const caps = [...new Set((midSentence.match(/\b[A-Z][a-z]{2,}\b/g)||[]))]
+    .filter(w=>!STOP.has(w.toLowerCase()) && !srcSet.has(w.toLowerCase()));
+  let acc = Math.max(0, 10 - badNums.length*3 - caps.length*2);
+
+  /* concision */
+  const uniq = new Set(sum).size / Math.max(1,n);
+  let con = 10;
+  if(n < 40) con -= (40-n)*0.25;
+  if(n > 90) con -= (n-90)*0.15;
+  if(uniq < 0.55) con -= 2;
+  con = Math.max(0, Math.min(10, Math.round(con)));
+
+  let score = Math.round(acc*0.3 + key*0.3 + own*0.25 + con*0.15);
+  score = Math.min(score, acc + 2, key + 3, own + 4);   // one bad criterion caps the whole mark
+  score = Math.max(0, Math.min(10, score));
+
+  const ranked = [{k:"Accuracy",v:acc},{k:"Key points",v:key},{k:"Own words",v:own},{k:"Concision",v:con}].sort((a,b)=>b.v-a.v);
+  const praise = {
+    "Accuracy":"Everything you wrote checks out against the article — no invented numbers or names.",
+    "Key points":"You picked up the details that actually carry the story.",
+    "Own words":"This is written in your own voice rather than lifted from the text.",
+    "Concision":"Good length — tight, with no padding."
+  };
+  let improve;
+  const low = ranked[ranked.length-1];
+  if(low.k==="Own words" && bestPhrase)
+    improve = `You reused a run of ${best} words straight from the article ("${bestPhrase.split(" ").slice(0,7).join(" ")}…"). Cover that idea again without looking at it.`;
+  else if(low.k==="Key points")
+    improve = missed.length ? `You left out ${missed.slice(0,3).map(m=>`"${m}"`).join(", ")} — at least one of those is doing real work in the story.` : "Try naming who did what, and one number that shows the scale.";
+  else if(low.k==="Accuracy")
+    improve = (badNums.length ? `Check these figures against the article: ${badNums.slice(0,3).join(", ")}. ` : "") + (caps.length ? `These names don't appear in it: ${caps.slice(0,3).join(", ")}.` : "Stick to what the article actually says.");
+  else
+    improve = n < 40 ? "Too short to cover the story — aim for 40 to 90 words." : n > 90 ? `At ${n} words this is running long. Cut the sentence that repeats an idea.` : "Trim any sentence that restates something you've already said.";
+
+  return { score, criteria:[{name:"Accuracy",mark:acc},{name:"Key points",mark:key},{name:"Own words",mark:own},{name:"Concision",mark:con}],
+           good: praise[ranked[0].k], improve, offline:true };
+}
+
+/* ---------- state ---------- */
+const STEPS = ["Searching today's news","Checking each story is classroom-safe","Writing story 1 at three levels","Writing story 2 at three levels","Writing story 3 at three levels"];
+const $ = id => document.getElementById(id);
+let stories = [], si = 0, lv = 1, answered = 0, currentDate = dateStr;
+
+function step(i, state){
+  const li = $("steps").children[i]; if(!li) return;
+  [...$("steps").children].forEach((x,j)=>{ if(j<i && x.className!=="fail") x.className="done"; });
+  li.className = state;
+}
+function initSteps(){ $("steps").innerHTML = STEPS.map(s=>`<li><span class="dot"></span>${s}</li>`).join(""); }
+const todayKey = () => "edition:" + new Date().toISOString().slice(0,10);
+
+async function loadEdition(force){
+  $("build").classList.add("on"); $("main").hidden = true; initSteps();
+  $("build-err").classList.remove("on");
+  $("today").textContent = new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+  step(0,"now");
+
+  try{
+    const ed = await fetchEdition();
+    stories = ed.stories || []; currentDate = ed.dateLabel || ed.date || dateStr;
+    if(!stories.length) throw new Error("The edition came back empty.");
+    apiOK = true;
+    step(0,"done"); step(1,"done"); step(2,"done"); step(3,"done"); step(4,"done");
+
+    if(ed.stale || ed.date !== new Date().toISOString().slice(0,10)){
+      $("seed-note").style.display = "";
+      $("seed-note").innerHTML = "<b>Showing the edition from " + (ed.dateLabel||ed.date) + ".</b> " +
+        "Today's edition hasn't been built yet — the morning job runs shortly, or an editor can press Rebuild today. " +
+        "These are real, sourced stories; links are in the sidebar.";
+    } else {
+      $("seed-note").style.display = "none";
+    }
+    show();
+  }catch(err){
+    step(0,"fail");
+    $("build-err").innerHTML = "";
+    const p = document.createElement("div"); p.style.whiteSpace = "pre-wrap";
+    p.textContent = "Couldn't reach the Newsprint server.\n\n" + err.message +
+      "\n\nThe server may be waking up (free hosting sleeps after inactivity — give it up to a minute) or today's edition may not be built yet. Press Rebuild today to retry.";
+    $("build-err").appendChild(p);
+    $("build-err").classList.add("on");
+  }
+}
+
+/* ---------- render ---------- */
+function renderTabs(pending, loading){
+  const list = (pending && pending.length >= stories.length) ? pending : stories;
+  $("tabs").innerHTML = "";
+  list.forEach((s,i)=>{
+    const b = document.createElement("button");
+    b.className="tab"; b.role="tab";
+    b.setAttribute("aria-selected", i===si && !loading);
+    b.disabled = i >= stories.length;
+    b.innerHTML = `<span>${s.kicker||"Loading"}</span>${s.tab||"Writing…"}`;
+    b.onclick = ()=>{ si=i; lv=1; show(); scrollTo({top:0}); };
+    $("tabs").appendChild(b);
+  });
+}
+
+function show(){
+  $("build").classList.remove("on"); $("main").hidden = false;
+  const s = stories[si]; if(!s) return;
+  renderTabs();
+  $("kicker").textContent = s.kicker;
+  $("byline").textContent = `Curated from live news · ${currentDate}`;
+  $("motif").innerHTML = MOTIFS[s.motif];
+  $("gloss").innerHTML = s.glossary.map(g=>`<dt>${g[0]}</dt><dd>${g[1]}</dd>`).join("");
+  $("sources").innerHTML = s.sources.length
+    ? s.sources.map(x=>`<a href="${x.url}" target="_blank" rel="noopener">${x.name} ↗</a>`).join("")
+    : `<span style="color:var(--ink-soft)">No source link for this story.</span>`;
+
+  $("debate").style.display = s.q ? "" : "none";
+  $("quiz-panel").style.display = (s.quiz && s.quiz.length) ? "" : "none";
+  $("q-text").textContent = s.q ? s.q.text : "";
+  $("v-yes").textContent = s.q ? s.q.yes : "Yes";
+  $("v-no").textContent = s.q ? s.q.no : "No";
+  $("v-yes").classList.remove("picked"); $("v-no").classList.remove("picked");
+  $("bars").classList.remove("on"); $("f-yes").style.width="0"; $("f-no").style.width="0";
+
+  answered = 0;
+  $("qs").innerHTML = "";
+  s.quiz.forEach((q,qi)=>{
+    const d = document.createElement("div"); d.className="q";
+    d.innerHTML = `<span class="qtype" data-t="${q.type}">${q.type}</span>
+      <p class="qt">${qi+1}. ${q.q}</p>
+      <div class="opts">${q.o.map((o,oi)=>`<button class="opt" data-o="${oi}"><span class="mark">${"ABCD"[oi]}</span><span>${o}</span></button>`).join("")}</div>
+      <p class="why">${q.why||""}</p>`;
+    d.querySelectorAll(".opt").forEach(btn=>{
+      btn.onclick = ()=>{
+        d.querySelectorAll(".opt").forEach(b=>b.disabled=true);
+        d.querySelectorAll(".opt")[q.a].classList.add("right");
+        if(+btn.dataset.o !== q.a) btn.classList.add("wrong");
+        d.querySelector(".why").classList.add("on");
+        answered++; $("score").textContent = `${answered} of ${s.quiz.length} answered`;
+        if(answered>=s.quiz.length && s.quiz.length>0) completeTask("quiz");
+      };
+    });
+    $("qs").appendChild(d);
+  });
+  $("score").textContent = `0 of ${s.quiz.length} answered`;
+  resetSummary();
+  renderLevel();
+}
+
+function markUpTerms(text, glossary){
+  let out = text;
+  glossary.forEach(g=>{
+    const term = g[0], def = g[1];
+    const safe = term.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+    const re = new RegExp(`(?<![\\w>])(${safe}s?)(?![\\w<])`, "i");
+    if(re.test(out) && !/class="term"/.test(out.match(re).input.slice(0, out.search(re)))){
+      out = out.replace(re, `<button class="term" aria-expanded="false">$1<span class="defn"><b>${term}</b>${def}</span></button>`);
+    }
+  });
+  return out;
+}
+
+function renderLevel(){
+  const s = stories[si], L = s.levels[lv];
+  $("headline").textContent = L.headline;
+  const a = $("article");
+  a.innerHTML = (L.paragraphs||[]).map(p=>`<p>${markUpTerms(p, s.glossary)}</p>`).join("");
+  a.classList.remove("fade"); void a.offsetWidth; a.classList.add("fade");
+
+  document.querySelectorAll(".notch").forEach(n=>n.setAttribute("aria-checked", +n.dataset.lv===lv));
+  $("thumb").style.transform = `translateX(${lv*100}%)`;
+  const words = a.textContent.trim().split(/\s+/).length;
+  $("m-age").textContent = L.age; $("m-words").textContent = words;
+  $("m-time").textContent = Math.max(1, Math.round(words/130)) + " min";
+
+  a.querySelectorAll(".term").forEach(t=>{
+    t.onclick = e=>{
+      e.stopPropagation();
+      const open = t.getAttribute("aria-expanded")==="true";
+      a.querySelectorAll(".term").forEach(x=>x.setAttribute("aria-expanded","false"));
+      t.setAttribute("aria-expanded", !open);
+    };
+  });
+  stopSpeech();
+  completeTask("read");
+}
+document.addEventListener("click", ()=>document.querySelectorAll(".term").forEach(t=>t.setAttribute("aria-expanded","false")));
+
+document.querySelectorAll(".notch").forEach(n=>{
+  n.onclick = ()=>{ lv=+n.dataset.lv; renderLevel(); };
+  n.onkeydown = e=>{
+    if(e.key==="ArrowRight"||e.key==="ArrowLeft"){
+      e.preventDefault();
+      lv = Math.min(2, Math.max(0, lv + (e.key==="ArrowRight"?1:-1)));
+      renderLevel(); document.querySelector(`.notch[data-lv="${lv}"]`).focus();
+    }
+  };
+});
+
+["yes","no"].forEach(v=>{
+  $("v-"+v).onclick = ()=>{
+    $("v-yes").classList.toggle("picked", v==="yes");
+    $("v-no").classList.toggle("picked", v==="no");
+    const y = 14 + (v==="yes"?1:0), n = 14 + (v==="no"?1:0);
+    const py = Math.round(y/(y+n)*100);
+    $("p-yes").textContent = py+"%"; $("p-no").textContent = (100-py)+"%";
+    $("bars").classList.add("on");
+    requestAnimationFrame(()=>{ $("f-yes").style.width=py+"%"; $("f-no").style.width=(100-py)+"%"; });
+  };
+});
+
+/* ---------- summary marking ---------- */
+function resetSummary(){
+  $("sum").value=""; $("wc").textContent="0 words"; $("wc").classList.remove("ok");
+  $("mark").disabled=true; $("result").classList.remove("on"); $("sum-err").classList.remove("on");
+}
+$("sum").addEventListener("input", ()=>{
+  const t = $("sum").value.trim();
+  const n = t ? t.split(/\s+/).length : 0;
+  $("wc").textContent = n + " words" + (n<40 ? ` · ${40-n} more to go` : n>90 ? " · a little long" : " · good length");
+  $("wc").classList.toggle("ok", n>=40 && n<=90);
+  $("mark").disabled = n < 40;
+});
+$("mark").onclick = async ()=>{
+  const btn = $("mark"); btn.disabled = true; btn.textContent = "Marking…";
+  $("sum-err").classList.remove("on");
+  try{
+    const s = stories[si];
+    const storyText = s.levels[lv].headline + ". " + s.levels[lv].paragraphs.join(" ");
+    let r;
+    try{ r = await markOnServer(storyText, $("sum").value.trim()); r.offline = false; }
+    catch(apiErr){ r = markOffline(storyText, $("sum").value.trim()); }
+    $("r-score").textContent = r.score;
+    $("r-crit").innerHTML = (r.criteria||[]).map(c=>
+      `<div class="crit">${c.name}<i>${c.mark}/10</i><div class="ctrack"><div class="cfill" data-w="${c.mark*10}"></div></div></div>`
+    ).join("");
+    $("r-crit").insertAdjacentHTML("afterbegin", r.offline
+      ? '<div style="font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:12px">Marked offline · rule-based, no AI</div>'
+      : '<div style="font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--blue);margin-bottom:12px">Marked by Claude</div>');
+    $("r-good").textContent = " " + (r.good||"");
+    $("r-improve").textContent = " " + (r.improve||"");
+    $("result").classList.add("on");
+    completeTask("sum");
+    requestAnimationFrame(()=>document.querySelectorAll(".cfill").forEach(f=>f.style.width=f.dataset.w+"%"));
+  }catch(e){
+    $("sum-err").textContent = (apiOK ? "Marking didn't come back. " : "Marking needs the model API, which isn't reachable from here right now. ") + e.message + " Your summary is still in the box — press Mark my summary again.";
+    $("sum-err").classList.add("on");
+  }
+  btn.textContent = "Mark my summary"; btn.disabled = false;
+};
+
+/* ---------- read aloud, progress, rebuild ---------- */
+const canSpeak = "speechSynthesis" in window;
+if(!canSpeak) $("listen").parentElement.style.display="none";
+function stopSpeech(){ if(canSpeak){ speechSynthesis.cancel(); $("listen").textContent="▶ Read this aloud"; } }
+$("listen").onclick = ()=>{
+  if(speechSynthesis.speaking){ stopSpeech(); return; }
+  const u = new SpeechSynthesisUtterance($("headline").textContent + ". " + $("article").textContent);
+  u.rate=[.85,.95,1][lv]; u.lang="en-GB"; u.onend=stopSpeech;
+  speechSynthesis.speak(u); $("listen").textContent="■ Stop reading";
+};
+addEventListener("scroll", ()=>{
+  const h=document.documentElement;
+  $("progress").style.width = (h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+"%";
+});
+$("rebuild").onclick = async ()=>{
+  const btn = $("rebuild"); const original = btn.textContent;
+  const token = prompt("Editor token to build a fresh edition (leave blank to just reload the latest):");
+  if(token){
+    btn.textContent = "Building…"; btn.disabled = true;
+    try{
+      const r = await fetch(API + "/api/rebuild", {method:"POST", headers:{"x-rebuild-token":token}});
+      if(!r.ok){ const e = await r.json().catch(()=>({})); throw new Error(e.error||("HTTP "+r.status)); }
+    }catch(e){ alert("Rebuild failed: " + e.message); }
+    btn.textContent = original; btn.disabled = false;
+  }
+  si=0; lv=1; loadEdition(true); scrollTo({top:0});
+};
+
+initStreakUI();
+loadEdition(false);
+</script>
+
+<div class="streak-modal" id="streak-modal" role="dialog" aria-modal="true" aria-labelledby="streak-title">
+  <div class="streak-box">
+    <button class="close" id="streak-close" aria-label="Close">×</button>
+    <h2 id="streak-title">Your reading streak</h2>
+    <div class="streak-big"><span class="flame" id="streak-flame">🔥</span> <span id="streak-count">0</span></div>
+    <div class="streak-sub" id="streak-sub">Read, answer and summarise a story to start a streak.</div>
+    <div class="streak-week" id="streak-week"></div>
+    <div id="streak-tasks">
+      <div class="streak-task" id="task-read"><span class="box">✓</span> Read a story</div>
+      <div class="streak-task" id="task-quiz"><span class="box">✓</span> Answer all its questions</div>
+      <div class="streak-task" id="task-sum"><span class="box">✓</span> Get a summary marked</div>
+    </div>
+    <p class="streak-note">Your streak is kept on this device only — nothing is sent anywhere, and no account is needed. Complete all three tasks on one story to tick off the day. Miss a day and the streak starts again.<br><button class="streak-reset" id="streak-reset">Reset my streak</button></p>
+  </div>
+</div>
+<div class="streak-toast" id="streak-toast"><span class="flame">🔥</span> <span id="toast-text"></span></div>
+
+</body>
+</html>
