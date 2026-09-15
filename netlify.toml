@@ -1,0 +1,27 @@
+# netlify.toml — Newsprint on Netlify
+
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+# Pretty API paths → functions
+[[redirects]]
+  from = "/api/edition"
+  to = "/.netlify/functions/edition"
+  status = 200
+
+[[redirects]]
+  from = "/api/mark"
+  to = "/.netlify/functions/mark"
+  status = 200
+
+[[redirects]]
+  from = "/api/rebuild"
+  to = "/.netlify/functions/rebuild"
+  status = 200
+
+# Daily curation cron: 05:30 UTC, every day. Netlify cron uses UTC and runs
+# Mon–Sun; the function itself is cheap to run at weekends and simply refreshes
+# the edition. Change to "30 5 * * 1-5" for weekdays only.
+[functions."curate-scheduled"]
+  schedule = "30 5 * * *"
